@@ -34,6 +34,18 @@ def registration_hours(contents)
   sorted_hours.each { |hour, count| puts "Hour: #{hour}, Registrations: #{count}" }
 end
 
+def registration_days(contents)
+  days = Hash.new(0)
+  
+  contents.each do |row|
+    reg_time = Time.strptime(row[:regdate], "%m/%d/%y %H:%M") # Parse time
+    day_of_week = reg_time.strftime("%A") # Get full weekday name
+    days[day_of_week] += 1
+  end
+
+  sorted_days = days.sort_by { |_, count| -count } # Sort by frequency (descending)
+  sorted_days.each { |day, count| puts "Day: #{day}, Registrations: #{count}" }
+end
 
 def legislators_by_zipcode(zip)
   civic_info = Google::Apis::CivicinfoV2::CivicInfoService.new
@@ -66,13 +78,13 @@ contents = CSV.open(
   'event_attendees.csv',
   headers: true,
   header_converters: :symbol
-)
+).map(&:to_h)
 
 template_letter = File.read('form_letter.erb')
 erb_template = ERB.new template_letter
 
-contents.each do |row|
-  id = row[0]
+contents.each_with_index do |row, index|
+  id = index + 1
   name = row[:first_name]
   zipcode = clean_zipcode(row[:zipcode])
   phone = clean_phone_number(row[:homephone])
@@ -81,8 +93,7 @@ contents.each do |row|
   form_letter = erb_template.result(binding)
 
   save_thank_you_letter(id,form_letter)
-
-  registration_hours(contents)
-
 end
 
+registration_hours(contents)
+registration_days(contents)
